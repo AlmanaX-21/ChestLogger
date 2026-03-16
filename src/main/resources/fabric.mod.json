@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "chestlogger",
+  "version": "${version}",
+  "name": "ChestLogger",
+  "description": "A newer approach to questing in minecraft",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/chestlogger/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "me.almana.chestlogger.ShopLoggerMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}

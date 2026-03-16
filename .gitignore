@@ -1,0 +1,13 @@
+# Gradle
+build/
+.gradle/
+
+# IDE
+.idea/
+.vscode/
+
+# Fabric
+run/
+
+# Misc
+plan/
