@@ -99,7 +99,7 @@ public final class PaymentParser {
         double amount = parseMoney(transactionMatcher.group(2));
         String landName = transactionMatcher.group(3).trim();
         Double newBalance = transactionMatcher.group(4) == null ? null : parseMoney(transactionMatcher.group(4));
-        String movement = action.equalsIgnoreCase("put") ? "Input" : "Withdraw";
+        String movement = action.equalsIgnoreCase("put") ? "Deposit" : "Withdraw";
         return new ParsedTransaction(amount, movement, landName, newBalance);
     }
 

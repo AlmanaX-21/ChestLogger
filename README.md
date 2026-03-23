@@ -24,9 +24,9 @@ You will need **two separate Google Sheets** — one for shop logs and one for p
 2. Name it something like **"ChestLogger - Payments"**.
 3. Add these headers in row 1:
 
-| A | B | C | D | E |
-|---|---|---|---|---|
-| Date | National Treasury | Change Amount | Player | Movement |
+| A | B | C | D | E | F |
+|---|---|---|---|---|---|
+| Date | National Treasury | Change Amount | Tally difference | Player | Movement |
 
 ### Step 3 - Add the Apps Script to Each Sheet
 
@@ -91,6 +91,7 @@ function doPost(e) {
     data.date,
     data.treasury,
     data.changeAmount,
+    data.tallyDifference,
     data.player,
     data.movement
   ]);
@@ -152,6 +153,8 @@ You should now have **two URLs** — one for shops and one for payments.
      "shopSheetUrl": "https://script.google.com/macros/s/SHOPS_SCRIPT_URL/exec",
      "paymentSheetUrl": "https://script.google.com/macros/s/PAYMENTS_SCRIPT_URL/exec",
      "apiKey": "myServer_2026_xK9pL",
+     "playerAlias": "Awesome",
+     "showSuccessMessage": true,
      "enabled": true
    }
    ```
@@ -159,6 +162,8 @@ You should now have **two URLs** — one for shops and one for payments.
 4. Launch Minecraft.
 
 > **Important:** The `apiKey` in the config must match the `API_KEY` in both Apps Scripts exactly. If they don't match, requests will be rejected.
+>
+> `playerAlias` is optional. If it is blank, the mod uses your in-game name.
 
 ---
 
@@ -196,11 +201,11 @@ New balance of the bank: $5,189,380.00
 
 The mod parses this and sends a row to the **Payments** sheet:
 
-| Date | National Treasury | Change Amount | Player | Movement |
-|---|---|---|---|---|
-| 16/03/2026 | 5189380 | 30000 | YourName | Input |
+| Date | National Treasury | Change Amount | Tally difference | Player | Movement |
+|---|---|---|---|---|---|
+| 16/03/2026 | 5189380 | 30000 |  | Awesome | Deposit |
 
-- **Input** = money deposited into the bank
+- **Deposit** = money deposited into the bank
 - **Withdraw** = money taken out of the bank
 - Change Amount is negative for withdrawals
 

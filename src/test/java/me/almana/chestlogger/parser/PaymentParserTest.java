@@ -15,7 +15,7 @@ class PaymentParserTest {
 
         assertNotNull(transaction);
         assertEquals(30000.0D, transaction.amount());
-        assertEquals("Input", transaction.movement());
+        assertEquals("Deposit", transaction.movement());
         assertEquals("Brezg", transaction.landName());
     }
 

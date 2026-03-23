@@ -4,6 +4,7 @@ import me.almana.chestlogger.ShopLoggerMod;
 import me.almana.chestlogger.parser.PaymentParser;
 import me.almana.chestlogger.parser.ShopParser;
 import me.almana.chestlogger.util.ChatUtils;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 
 import java.util.HashMap;
@@ -20,6 +21,8 @@ public final class ChatListener {
     }
 
     public static void register() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> ShopParser.tick());
+
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             try {
                 String raw = message.getString();

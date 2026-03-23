@@ -70,4 +70,26 @@ class ShopParserTest {
         assertEquals(0, data.getBuyPrice());
         assertEquals(330, data.getSellPrice());
     }
+
+    @Test
+    void parsesPotionShopWithExtraDetailLines() {
+        List<String> lines = List.of(
+                "Shop Information:",
+                "Owner: alchemist",
+                "Stock: 128",
+                "Item: [Potion of Fire Resistance]",
+                "Effects: Fire Resistance",
+                "Duration: 3:00",
+                "Buy 1 for 120 Coins"
+        );
+
+        ShopData data = ShopParser.parseLines(lines);
+
+        assertNotNull(data);
+        assertEquals("alchemist", data.getOwner());
+        assertEquals(128, data.getStock());
+        assertEquals("Potion of Fire Resistance", data.getItem());
+        assertEquals(120, data.getBuyPrice());
+        assertEquals(0, data.getSellPrice());
+    }
 }

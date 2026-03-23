@@ -20,6 +20,8 @@ public final class ModConfig {
     private String shopSheetUrl = "";
     private String paymentSheetUrl = "";
     private String apiKey = "";
+    private String playerAlias = "";
+    private boolean showSuccessMessage = true;
     private boolean enabled = true;
 
     public static ModConfig get() {
@@ -75,6 +77,14 @@ public final class ModConfig {
 
     public String getApiKey() {
         return apiKey;
+    }
+
+    public String getPlayerAlias() {
+        return playerAlias;
+    }
+
+    public boolean isShowSuccessMessage() {
+        return showSuccessMessage;
     }
 
     public boolean isEnabled() {

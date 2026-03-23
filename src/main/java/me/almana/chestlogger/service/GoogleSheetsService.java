@@ -6,7 +6,7 @@ import me.almana.chestlogger.config.ModConfig;
 import me.almana.chestlogger.data.PaymentData;
 import me.almana.chestlogger.data.ShopData;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.text.Text;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -39,7 +39,7 @@ public final class GoogleSheetsService {
         }
 
         String buySellType;
-        if (data.getBuyPrice() > 0 && data.getSellPrice() > 0) {
+        if (data.getBuyPrice() > 0 && data.getSellPrice() > 0 && data.getSellPrice() != 1) {
             buySellType = "Both";
         } else if (data.getBuyPrice() > 0) {
             buySellType = "Buy";
@@ -47,15 +47,16 @@ public final class GoogleSheetsService {
             buySellType = "Sell";
         }
 
+        String displayName = resolveDisplayName();
         send(url, new ShopPayload(
                 LocalDate.now().format(DATE_FORMATTER),
-                resolveChestLocation(),
-                resolvePlayerName(),
+                data.getShopLocation(),
+                displayName,
                 data.getItem(),
                 data.getStock(),
                 buySellType,
                 data.getOwner()
-        ));
+        ), "Shop log sent as " + displayName);
     }
 
     public static void logPayment(PaymentData data) {
@@ -74,17 +75,19 @@ public final class GoogleSheetsService {
                 ? -Math.round(data.getAmount())
                 : Math.round(data.getAmount());
         long treasury = Math.round(data.getNewBalance());
+        String displayName = resolveDisplayName();
 
         send(url, new PaymentPayload(
                 data.getDate().format(DATE_FORMATTER),
                 treasury,
                 signedChange,
-                resolvePlayerName(),
+                "",
+                displayName,
                 data.getMovement()
-        ));
+        ), "Payment log sent as " + displayName);
     }
 
-    private static void send(String url, Object payload) {
+    private static void send(String url, Object payload, String successMessage) {
         try {
             var wrapper = new java.util.HashMap<String, Object>();
             wrapper.put("apiKey", ModConfig.get().getApiKey());
@@ -97,11 +100,14 @@ public final class GoogleSheetsService {
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
 
-            ShopLoggerMod.LOGGER.info("Sending payload to {}: {}", url, json);
+            ShopLoggerMod.LOGGER.info("Sending payload to {}", url);
 
             CLIENT.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenAccept(response -> {
                         ShopLoggerMod.LOGGER.info("Response {}: {}", response.statusCode(), response.body());
+                        if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                            notifySuccess(successMessage);
+                        }
                     })
                     .exceptionally(throwable -> {
                         ShopLoggerMod.LOGGER.warn("Failed to upload log payload", throwable);
@@ -112,7 +118,12 @@ public final class GoogleSheetsService {
         }
     }
 
-    private static String resolvePlayerName() {
+    private static String resolveDisplayName() {
+        String alias = ModConfig.get().getPlayerAlias();
+        if (alias != null && !alias.isBlank()) {
+            return alias;
+        }
+
         MinecraftClient client = MinecraftClient.getInstance();
         if (client != null && client.getSession() != null) {
             return client.getSession().getUsername();
@@ -120,20 +131,29 @@ public final class GoogleSheetsService {
         return "Unknown";
     }
 
-    private static String resolveChestLocation() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client != null && client.player != null) {
-            BlockPos pos = client.player.getBlockPos();
-            return pos.getX() + ", " + pos.getY() + ", " + pos.getZ();
+    private static void notifySuccess(String message) {
+        if (!ModConfig.get().isShowSuccessMessage()) {
+            return;
         }
-        return "Unknown";
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            return;
+        }
+
+        client.execute(() -> {
+            if (client.player != null) {
+                client.player.sendMessage(Text.literal("[ChestLogger] " + message), false);
+            }
+        });
     }
 
-    // Sheet: Date | National treasure | Change amount | Player | Withdraw/Input
+    // Sheet: Date | National treasury | Change amount | Tally difference | Player | Movement
     private record PaymentPayload(
             String date,
             long treasury,
             long changeAmount,
+            String tallyDifference,
             String player,
             String movement
     ) {

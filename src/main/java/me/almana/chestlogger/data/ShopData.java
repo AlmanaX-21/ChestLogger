@@ -7,13 +7,19 @@ public final class ShopData {
     private final int stock;
     private final int buyPrice;
     private final int sellPrice;
+    private final String shopLocation;
 
     public ShopData(String owner, String item, int stock, int buyPrice, int sellPrice) {
+        this(owner, item, stock, buyPrice, sellPrice, "Unknown");
+    }
+
+    public ShopData(String owner, String item, int stock, int buyPrice, int sellPrice, String shopLocation) {
         this.owner = owner;
         this.item = item;
         this.stock = stock;
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
+        this.shopLocation = shopLocation;
     }
 
     public String getOwner() {
@@ -34,5 +40,9 @@ public final class ShopData {
 
     public int getSellPrice() {
         return sellPrice;
+    }
+
+    public String getShopLocation() {
+        return shopLocation;
     }
 }
