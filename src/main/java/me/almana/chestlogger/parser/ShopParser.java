@@ -1,6 +1,7 @@
 package me.almana.chestlogger.parser;
 
 import me.almana.chestlogger.ShopLoggerMod;
+import me.almana.chestlogger.config.ModConfig;
 import me.almana.chestlogger.data.ShopData;
 import me.almana.chestlogger.service.GoogleSheetsService;
 import net.minecraft.block.Block;
@@ -39,6 +40,7 @@ public final class ShopParser {
                 buffering = true;
                 shopLocation = resolveShopLocation();
                 flushAtMs = -1L;
+                debug("Started shop buffer at {}", shopLocation);
             }
 
             if (!buffering) {
@@ -49,6 +51,7 @@ public final class ShopParser {
                 if (hasRequiredData(BUFFER)) {
                     flushIfComplete();
                 }
+                debug("Reset shop buffer on non-shop line: {}", line);
                 reset();
                 return;
             }
@@ -67,6 +70,7 @@ public final class ShopParser {
 
             if (hasRequiredData(BUFFER)) {
                 flushAtMs = System.currentTimeMillis() + BUY_ONLY_FLUSH_DELAY_MS;
+                debug("Shop buffer ready. Scheduled flush in {}ms", BUY_ONLY_FLUSH_DELAY_MS);
             }
         } catch (Exception exception) {
             ShopLoggerMod.LOGGER.debug("Shop parser error", exception);
@@ -196,7 +200,16 @@ public final class ShopParser {
     private static void flushIfComplete() {
         ShopData data = parseLines(BUFFER, shopLocation);
         if (data != null) {
+            debug("Flushing shop owner={}, item={}, stock={}, buy={}, sell={}, location={}",
+                    data.getOwner(),
+                    data.getItem(),
+                    data.getStock(),
+                    data.getBuyPrice(),
+                    data.getSellPrice(),
+                    data.getShopLocation());
             GoogleSheetsService.logShop(data);
+        } else {
+            debug("Shop buffer could not be parsed: {}", BUFFER);
         }
     }
 
@@ -245,5 +258,11 @@ public final class ShopParser {
         buffering = false;
         flushAtMs = -1L;
         shopLocation = "Unknown";
+    }
+
+    private static void debug(String message, Object... args) {
+        if (ModConfig.get().isDebugLogging()) {
+            ShopLoggerMod.LOGGER.info("[ChestLogger Debug] " + message, args);
+        }
     }
 }

@@ -37,6 +37,10 @@ public final class GoogleSheetsService {
             ShopLoggerMod.LOGGER.warn("Shop sheet URL not configured");
             return;
         }
+        if (!isWebUrl(url)) {
+            ShopLoggerMod.LOGGER.warn("Shop sheet URL is invalid. Expected Apps Script web app URL, got: {}", url);
+            return;
+        }
 
         String buySellType;
         if (data.getBuyPrice() > 0 && data.getSellPrice() > 0 && data.getSellPrice() != 1) {
@@ -48,6 +52,13 @@ public final class GoogleSheetsService {
         }
 
         String displayName = resolveDisplayName();
+        debug("Shop parsed owner={}, item={}, stock={}, buy={}, sell={}, location={}",
+                data.getOwner(),
+                data.getItem(),
+                data.getStock(),
+                data.getBuyPrice(),
+                data.getSellPrice(),
+                data.getShopLocation());
         send(url, new ShopPayload(
                 LocalDate.now().format(DATE_FORMATTER),
                 data.getShopLocation(),
@@ -70,12 +81,21 @@ public final class GoogleSheetsService {
             ShopLoggerMod.LOGGER.warn("Payment sheet URL not configured");
             return;
         }
+        if (!isWebUrl(url)) {
+            ShopLoggerMod.LOGGER.warn("Payment sheet URL is invalid. Expected Apps Script web app URL, got: {}", url);
+            return;
+        }
 
         long signedChange = "Withdraw".equalsIgnoreCase(data.getMovement())
                 ? -Math.round(data.getAmount())
                 : Math.round(data.getAmount());
         long treasury = Math.round(data.getNewBalance());
         String displayName = resolveDisplayName();
+        debug("Payment parsed land={}, amount={}, movement={}, treasury={}",
+                data.getLandName(),
+                data.getAmount(),
+                data.getMovement(),
+                data.getNewBalance());
 
         send(url, new PaymentPayload(
                 data.getDate().format(DATE_FORMATTER),
@@ -93,6 +113,7 @@ public final class GoogleSheetsService {
             wrapper.put("apiKey", ModConfig.get().getApiKey());
             wrapper.put("data", payload);
             String json = GSON.toJson(wrapper);
+            debug("Outgoing payload: {}", GSON.toJson(payload));
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -107,6 +128,10 @@ public final class GoogleSheetsService {
                         ShopLoggerMod.LOGGER.info("Response {}: {}", response.statusCode(), response.body());
                         if (response.statusCode() >= 200 && response.statusCode() < 300) {
                             notifySuccess(successMessage);
+                        } else {
+                            ShopLoggerMod.LOGGER.warn("Upload rejected by endpoint. Status={}, body={}",
+                                    response.statusCode(),
+                                    response.body());
                         }
                     })
                     .exceptionally(throwable -> {
@@ -114,7 +139,7 @@ public final class GoogleSheetsService {
                         return null;
                     });
         } catch (Exception exception) {
-            ShopLoggerMod.LOGGER.debug("Failed to prepare log payload", exception);
+            ShopLoggerMod.LOGGER.warn("Failed to prepare log payload for URL {}", url, exception);
         }
     }
 
@@ -146,6 +171,16 @@ public final class GoogleSheetsService {
                 client.player.sendMessage(Text.literal("[ChestLogger] " + message), false);
             }
         });
+    }
+
+    private static boolean isWebUrl(String url) {
+        return url.startsWith("https://") || url.startsWith("http://");
+    }
+
+    private static void debug(String message, Object... args) {
+        if (ModConfig.get().isDebugLogging()) {
+            ShopLoggerMod.LOGGER.info("[ChestLogger Debug] " + message, args);
+        }
     }
 
     // Sheet: Date | National treasury | Change amount | Tally difference | Player | Movement

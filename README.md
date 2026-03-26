@@ -41,6 +41,8 @@ Repeat the following for **both** spreadsheets:
 
 ```javascript
 var API_KEY = "CHANGE_THIS_TO_A_SECRET_KEY";
+var SPREADSHEET_ID = "PASTE_SHOPS_SPREADSHEET_ID";
+var SHEET_NAME = "Shops";
 
 function doPost(e) {
   var payload = JSON.parse(e.postData.contents);
@@ -51,7 +53,18 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        error: "SheetNotFound",
+        requested: SHEET_NAME,
+        available: ss.getSheets().map(function(s) { return s.getName(); })
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   var data = payload.data;
 
   sheet.appendRow([
@@ -65,7 +78,12 @@ function doPost(e) {
   ]);
 
   return ContentService
-    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .createTextOutput(JSON.stringify({
+      status: "ok",
+      spreadsheetId: ss.getId(),
+      sheet: sheet.getName(),
+      row: sheet.getLastRow()
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 ```
@@ -74,6 +92,8 @@ function doPost(e) {
 
 ```javascript
 var API_KEY = "CHANGE_THIS_TO_A_SECRET_KEY";
+var SPREADSHEET_ID = "PASTE_PAYMENTS_SPREADSHEET_ID";
+var SHEET_NAME = "Payments";
 
 function doPost(e) {
   var payload = JSON.parse(e.postData.contents);
@@ -84,7 +104,18 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        error: "SheetNotFound",
+        requested: SHEET_NAME,
+        available: ss.getSheets().map(function(s) { return s.getName(); })
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   var data = payload.data;
 
   sheet.appendRow([
@@ -97,13 +128,23 @@ function doPost(e) {
   ]);
 
   return ContentService
-    .createTextOutput(JSON.stringify({ status: "ok" }))
+    .createTextOutput(JSON.stringify({
+      status: "ok",
+      spreadsheetId: ss.getId(),
+      sheet: sheet.getName(),
+      row: sheet.getLastRow()
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 ```
 
 5. **Change `CHANGE_THIS_TO_A_SECRET_KEY`** to a secret key. Use the **same key** in both scripts. See the section below on how to generate one.
-6. Click **Save** (Ctrl+S).
+6. Set each `SPREADSHEET_ID` to the ID from that spreadsheet URL:
+   ```
+   https://docs.google.com/spreadsheets/d/<THIS_PART_IS_THE_ID>/edit
+   ```
+7. Make sure `SHEET_NAME` exactly matches your tab names (case-sensitive, spaces included).
+8. Click **Save** (Ctrl+S).
 
 ### How to Get an API Key
 
@@ -155,6 +196,7 @@ You should now have **two URLs** — one for shops and one for payments.
      "apiKey": "myServer_2026_xK9pL",
      "playerAlias": "Awesome",
      "showSuccessMessage": true,
+     "debugLogging": false,
      "enabled": true
    }
    ```
@@ -164,6 +206,8 @@ You should now have **two URLs** — one for shops and one for payments.
 > **Important:** The `apiKey` in the config must match the `API_KEY` in both Apps Scripts exactly. If they don't match, requests will be rejected.
 >
 > `playerAlias` is optional. If it is blank, the mod uses your in-game name.
+>
+> `shopSheetUrl` and `paymentSheetUrl` must be the deployed Apps Script web app URLs (they start with `https://script.google.com/macros/s/.../exec`), not spreadsheet IDs.
 
 ---
 
@@ -189,6 +233,7 @@ The mod detects this, parses the data, and sends a row to the **Shops** sheet:
 | 16/03/2026 | -6956, 108, 732 | YourName | Spore Blossom | 134 | Both | _Mutton |
 
 The **Buy/Sell/Both** column indicates whether the shop offers buying, selling, or both.
+If a shop has a buy option and sell price is `1`, it is logged as `Buy`.
 
 ### Bank Transaction Logging
 
@@ -232,10 +277,26 @@ The URL stays the same. No config change needed.
 - Make sure both URLs in the config file are correct.
 - Make sure the `apiKey` in the config matches the `API_KEY` in both Apps Scripts.
 - Make sure both Apps Scripts are deployed as **Web apps** with access set to **Anyone**.
+- Make sure each script has the correct `SPREADSHEET_ID` and exact `SHEET_NAME`.
 - Check Minecraft logs (`logs/latest.log`) for error messages from the mod.
 
 ### "Unauthorized" in logs
 - The API key in `chestlogger.json` does not match the `API_KEY` variable in the Apps Script. Make sure they are identical.
+
+### "Shop sheet URL is invalid" or "Payment sheet URL is invalid"
+- You put a spreadsheet ID in config instead of the Apps Script web app URL.
+- Config values must look like:
+  `https://script.google.com/macros/s/<deployment-id>/exec`
+
+### `TypeError: Cannot read properties of null (reading 'appendRow')` in Apps Script response
+- `getSheetByName(SHEET_NAME)` returned `null`.
+- Fix `SHEET_NAME` to exactly match the tab name.
+- Use the script above that returns `available` sheet names for easier debugging.
+
+### Response status is 200 but body contains an HTML error page
+- The web app endpoint ran but your script threw an exception.
+- Read the response body and Apps Script execution logs to find the real error.
+- If this happens, treat the upload as failed even if a success chat message appears.
 
 ### Duplicate entries
 - The mod ignores identical chat messages within 2 seconds. If you're still seeing duplicates, the server may be sending slightly different messages.
@@ -246,3 +307,7 @@ The URL stays the same. No config change needed.
 
 ### Config file not appearing
 - Launch Minecraft once with the mod installed, then close the game. The config file is generated on first launch.
+
+### Getting deeper logs
+- Set `"debugLogging": true` in `chestlogger.json`.
+- The mod will print parser and payload diagnostics with `[ChestLogger Debug]`.

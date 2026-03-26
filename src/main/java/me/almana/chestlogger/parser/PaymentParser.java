@@ -1,6 +1,7 @@
 package me.almana.chestlogger.parser;
 
 import me.almana.chestlogger.ShopLoggerMod;
+import me.almana.chestlogger.config.ModConfig;
 import me.almana.chestlogger.data.PaymentData;
 import me.almana.chestlogger.service.GoogleSheetsService;
 
@@ -33,6 +34,11 @@ public final class PaymentParser {
             ParsedTransaction transaction = parseTransactionLine(line);
             if (transaction != null) {
                 if (transaction.newBalance() != null) {
+                    debug("Parsed single-line payment land={}, amount={}, movement={}, balance={}",
+                            transaction.landName(),
+                            transaction.amount(),
+                            transaction.movement(),
+                            transaction.newBalance());
                     PaymentData payment = new PaymentData(
                             LocalDate.now(),
                             transaction.amount(),
@@ -46,6 +52,10 @@ public final class PaymentParser {
                 }
 
                 // Lands transaction details can be split into two lines
+                debug("Parsed pending payment land={}, amount={}, movement={}",
+                        transaction.landName(),
+                        transaction.amount(),
+                        transaction.movement());
                 pendingPayment = new PendingPayment(
                         transaction.amount(),
                         transaction.movement(),
@@ -67,6 +77,7 @@ public final class PaymentParser {
                     pendingPayment.landName,
                     newBalance
             );
+            debug("Resolved pending payment with balance={} for land={}", newBalance, pendingPayment.landName);
             GoogleSheetsService.logPayment(payment);
             pendingPayment = null;
         } catch (Exception exception) {
@@ -115,5 +126,11 @@ public final class PaymentParser {
     }
 
     private record PendingPayment(double amount, String movement, String landName, long timestamp) {
+    }
+
+    private static void debug(String message, Object... args) {
+        if (ModConfig.get().isDebugLogging()) {
+            ShopLoggerMod.LOGGER.info("[ChestLogger Debug] " + message, args);
+        }
     }
 }

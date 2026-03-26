@@ -22,6 +22,7 @@ public final class ModConfig {
     private String apiKey = "";
     private String playerAlias = "";
     private boolean showSuccessMessage = true;
+    private boolean debugLogging = false;
     private boolean enabled = true;
 
     public static ModConfig get() {
@@ -85,6 +86,10 @@ public final class ModConfig {
 
     public boolean isShowSuccessMessage() {
         return showSuccessMessage;
+    }
+
+    public boolean isDebugLogging() {
+        return debugLogging;
     }
 
     public boolean isEnabled() {
