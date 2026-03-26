@@ -15,6 +15,7 @@ import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,7 +25,10 @@ public final class ShopParser {
     private static final int MAX_BUFFER_LINES = 20;
     private static final List<String> BUFFER = new ArrayList<>();
     private static final Pattern PRICE_PATTERN = Pattern.compile("\\bfor\\s+([0-9,]+(?:\\.[0-9]+)?)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ENCHANT_PATTERN = Pattern.compile("^[A-Za-z ]+\\s+(X{0,3}(?:IX|IV|V?I{0,3}))$");
+    private static final Pattern EFFECT_PATTERN = Pattern.compile("^\\(.+\\)$");
     private static boolean buffering = false;
+    private static boolean seenItem = false;
     private static long flushAtMs = -1L;
     private static String shopLocation = "Unknown";
 
@@ -47,7 +51,13 @@ public final class ShopParser {
                 return;
             }
 
-            if (!isPotentialShopLine(line)) {
+            if (line.startsWith("Item:")) {
+                seenItem = true;
+            } else if (line.startsWith("Buy") || line.startsWith("Sell")) {
+                seenItem = false;
+            }
+
+            if (!seenItem && !isPotentialShopLine(line)) {
                 if (hasRequiredData(BUFFER)) {
                     flushIfComplete();
                 }
@@ -115,6 +125,10 @@ public final class ShopParser {
             String owner = valueAfterColon(ownerLine);
             int stock = parseInt(valueAfterColon(stockLine));
             String item = normalizeItem(valueAfterColon(itemLine));
+            String extras = extractExtras(lines);
+            if (!extras.isEmpty()) {
+                item = item + " [" + extras + "]";
+            }
             int buyPrice = buyLine == null ? 0 : parsePrice(buyLine);
             int sellPrice = sellLine == null ? 0 : parsePrice(sellLine);
 
@@ -138,7 +152,12 @@ public final class ShopParser {
                 || line.startsWith("Enchantments")
                 || line.startsWith("Potion")
                 || line.startsWith("Effects")
-                || line.startsWith("Duration");
+                || line.startsWith("Duration")
+                || line.startsWith("Lore")
+                || line.startsWith("(")
+                || line.startsWith("[")
+                || line.startsWith("Barrel")
+                || ENCHANT_PATTERN.matcher(line).matches();
     }
 
     private static boolean isShopInfoLine(String line) {
@@ -172,6 +191,34 @@ public final class ShopParser {
             return "";
         }
         return line.substring(index + 1).trim();
+    }
+
+    private static String extractExtras(List<String> lines) {
+        int itemIdx = -1;
+        int buyIdx = lines.size();
+        for (int i = 0; i < lines.size(); i++) {
+            String l = lines.get(i);
+            if (itemIdx == -1 && l.startsWith("Item:")) {
+                itemIdx = i;
+            } else if (l.startsWith("Buy") || l.startsWith("Sell")) {
+                buyIdx = i;
+                break;
+            }
+        }
+        if (itemIdx == -1) {
+            return "";
+        }
+
+        StringJoiner joiner = new StringJoiner(", ");
+        for (int i = itemIdx + 1; i < buyIdx; i++) {
+            String line = lines.get(i).trim();
+            if (ENCHANT_PATTERN.matcher(line).matches()) {
+                joiner.add(line);
+            } else if (EFFECT_PATTERN.matcher(line).matches()) {
+                joiner.add(line.substring(1, line.length() - 1));
+            }
+        }
+        return joiner.toString();
     }
 
     private static String normalizeItem(String rawItem) {
@@ -256,6 +303,7 @@ public final class ShopParser {
     private static void reset() {
         BUFFER.clear();
         buffering = false;
+        seenItem = false;
         flushAtMs = -1L;
         shopLocation = "Unknown";
     }

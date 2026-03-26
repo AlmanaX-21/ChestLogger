@@ -92,4 +92,54 @@ class ShopParserTest {
         assertEquals(120, data.getBuyPrice());
         assertEquals(0, data.getSellPrice());
     }
+
+    @Test
+    void parsesEnchantedItem() {
+        List<String> lines = List.of(
+                "Shop Information:",
+                "Owner: _Mutton",
+                "Stock: 0",
+                "Item: [Diamond Chestplate]",
+                "Repair Cost: 1",
+                "Protection Environmental IV",
+                "Thorns II",
+                "Durability III",
+                "Buy 1 for 1625 Coins",
+                "Sell 1 for 1500 Coins"
+        );
+
+        ShopData data = ShopParser.parseLines(lines);
+
+        assertNotNull(data);
+        assertEquals("_Mutton", data.getOwner());
+        assertEquals(0, data.getStock());
+        assertEquals("Diamond Chestplate [Protection Environmental IV, Thorns II, Durability III]", data.getItem());
+        assertEquals(1625, data.getBuyPrice());
+        assertEquals(1500, data.getSellPrice());
+    }
+
+    @Test
+    void parsesPotionWithEffects() {
+        List<String> lines = List.of(
+                "Shop Information:",
+                "Owner: _Mutton",
+                "Stock: 41",
+                "Item: [Dwarven Calling]",
+                "Lore:",
+                "Very Strong Alcoholic brew.",
+                "(Strength II & Speed II ~3.30min)",
+                "Barrel aged",
+                "Buy 1 for 105 Coins",
+                "Sell 1 for 100 Coins"
+        );
+
+        ShopData data = ShopParser.parseLines(lines);
+
+        assertNotNull(data);
+        assertEquals("_Mutton", data.getOwner());
+        assertEquals(41, data.getStock());
+        assertEquals("Dwarven Calling [Strength II & Speed II ~3.30min]", data.getItem());
+        assertEquals(105, data.getBuyPrice());
+        assertEquals(100, data.getSellPrice());
+    }
 }
